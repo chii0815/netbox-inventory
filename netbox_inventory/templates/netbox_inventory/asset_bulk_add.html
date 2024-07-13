@@ -11,7 +11,9 @@
 
 
 {% block form %}
-  {% render_field form.count %}
+  {% render_field form.asset_tags %}
+  {% render_field form.create_serial_from_asset %}
+  {% render_field form.create_name_from_asset %}
   {% with model_form as form %}
     {{ block.super }}
   {% endwith %}

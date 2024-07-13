@@ -63,12 +63,17 @@ class AssetBulkCreateView(generic.BulkCreateView):
 
     def _create_objects(self, form, request):
         new_objects = []
-        for _ in range(form.cleaned_data['count']):
+        new_asset_tags = form.cleaned_data['asset_tags'].splitlines()
+        for asset_tag in new_asset_tags:
             # Reinstantiate the model form each time to avoid overwriting the same instance. Use a mutable
             # copy of the POST QueryDict so that we can update the target field value.
             model_form = self.model_form(request.POST.copy())
-            del(model_form.data['count'])
-
+            model_form.initial['asset_tag'] = asset_tag
+            if form.cleaned_data['create_name_from_asset']:
+                model_form.initial['name'] = asset_tag
+            if form.cleaned_data['create_serial_from_asset']:
+                model_form.initial['serial'] = asset_tag
+            del (model_form.data['asset_tags'])
             # Validate each new object independently.
             if model_form.is_valid():
                 obj = model_form.save()
