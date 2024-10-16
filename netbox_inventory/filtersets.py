@@ -3,11 +3,11 @@ from django.db.models import Q
 import django_filters
 
 from dcim.filtersets import DeviceFilterSet, InventoryItemFilterSet, ModuleFilterSet
-from dcim.models import Manufacturer, DeviceType, ModuleType, Site, Location
+from dcim.models import Manufacturer, Device, DeviceType, Module, ModuleType, InventoryItem, Site, Location
 from netbox.filtersets import NetBoxModelFilterSet
 from utilities import filters
 from tenancy.filtersets import ContactModelFilterSet
-from tenancy.models import Contact, Tenant
+from tenancy.models import Contact, ContactGroup, Tenant
 from .choices import HardwareKindChoices, AssetStatusChoices, PurchaseStatusChoices
 from .models import Asset, Delivery, InventoryItemType, InventoryItemGroup, Purchase, Supplier
 from .utils import query_located, get_asset_custom_fields_search_filters
@@ -29,6 +29,16 @@ class AssetFilterSet(NetBoxModelFilterSet):
         method='filter_manufacturer',
         label='Manufacturer (name)',
     )
+    device = filters.MultiValueCharFilter(
+        field_name='device__name',
+        lookup_expr='iexact',
+        label='Device (name)',
+    )
+    device_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='device',
+        queryset=Device.objects.all(),
+        label='Device (ID)',
+    )
     device_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name='device_type',
         queryset=DeviceType.objects.all(),
@@ -44,6 +54,11 @@ class AssetFilterSet(NetBoxModelFilterSet):
         lookup_expr='icontains',
         label='Device type (model)',
     )
+    module_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='module',
+        queryset=Module.objects.all(),
+        label='Module (ID)',
+    )
     module_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name='module_type',
         queryset=ModuleType.objects.all(),
@@ -52,7 +67,17 @@ class AssetFilterSet(NetBoxModelFilterSet):
     module_type_model = filters.MultiValueCharFilter(
         field_name='module_type__model',
         lookup_expr='icontains',
-        label='Module_type (model)',
+        label='Module type (model)',
+    )
+    inventoryitem = filters.MultiValueCharFilter(
+        field_name='inventoryitem__name',
+        lookup_expr='iexact',
+        label='Inventory item (name)',
+    )
+    inventoryitem_id = django_filters.ModelMultipleChoiceFilter(
+        field_name='inventoryitem',
+        queryset=InventoryItem.objects.all(),
+        label='Inventory item (ID)',
     )
     inventoryitem_type_id = django_filters.ModelMultipleChoiceFilter(
         field_name='inventoryitem_type',
@@ -99,6 +124,11 @@ class AssetFilterSet(NetBoxModelFilterSet):
         field_name='tenant__name',
         lookup_expr='icontains',
         label='Tenant (name)',
+    )
+    contact_group_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=ContactGroup.objects.all(),
+        field_name='contact__group',
+        label='Contact Group (ID)',
     )
     contact_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Contact.objects.all(),
@@ -225,7 +255,8 @@ class AssetFilterSet(NetBoxModelFilterSet):
 
     def search(self, queryset, name, value):
         query = (
-            Q(serial__icontains=value)
+            Q(id__contains=value)
+            | Q(serial__icontains=value)
             | Q(name__icontains=value)
             | Q(asset_tag__icontains=value)
             | Q(device_type__model__icontains=value)
@@ -234,6 +265,8 @@ class AssetFilterSet(NetBoxModelFilterSet):
             | Q(delivery__name__icontains=value)
             | Q(purchase__name__icontains=value)
             | Q(purchase__supplier__name__icontains=value)
+            | Q(tenant__name__icontains=value)
+            | Q(owner__name__icontains=value)
         )
         custom_field_filters = get_asset_custom_fields_search_filters()
         for custom_field_filter in custom_field_filters:
@@ -361,6 +394,11 @@ class DeliveryFilterSet(NetBoxModelFilterSet):
         field_name='purchase__supplier',
         queryset=Supplier.objects.all(),
         label='Supplier (ID)',
+    )
+    contact_group_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=ContactGroup.objects.all(),
+        field_name='receiving_contact__group',
+        label='Contact Group (ID)',
     )
     receiving_contact_id = django_filters.ModelMultipleChoiceFilter(
         field_name='receiving_contact',
